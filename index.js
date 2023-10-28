@@ -10,23 +10,38 @@ const LaunchRequestHandler = {
         const speakOutput = 'Welcome to the best professor finder for OSU. Which department and class number are you interested in?';
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .withShouldEndSession(false)
+            .reprompt('Please say the department and class number that you are interested in or say stop to exit')
+            .getResponse();
+    }
+};
+
+const StopIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent';
+    },
+    handle(handlerInput) {
+        const speakOutput = 'Goodbye!';
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .withShouldEndSession(true)
             .getResponse();
     }
 };
 
 async function determineBestProf(department, classNumber) {
-    const url = `https://osuprofs.com/courses/${department}/${classNumber}`;  // Corrected URL
+    const url = `https://osuprofs.com/courses/${department}/${classNumber}`;
 
     try {
         const response = await axios.get(url);
         const $ = cheerio.load(response.data);
-        const profName = $('h5.card-title a').first().text();
-
-        if (profName.length > 1) {
-            return profName;
+        const profName = $('h5.card-title a').first().text().trim();
+        const profRating = $('div.cards .card').first().find("tbody tr:first-child td").text().substring(0,4);
+        if (profName.length > 0) {
+            const bestProf = [profName, profRating];
+            return bestProf;
         } else {
-            return 'Professor information not found for the given department and class number.';
+            return false;
         }
     } catch (error) {
         console.error(error);
@@ -41,18 +56,23 @@ const FindProfessorIntentHandler = {
     },
     async handle(handlerInput) {
         const departmentValue = Alexa.getSlotValue(handlerInput.requestEnvelope, 'department');
-        console.log(`department: ${departmentValue}`)
         const classNumberValue = Alexa.getSlotValue(handlerInput.requestEnvelope, 'class');
-        console.log(`class: ${classNumberValue}`)
 
-        // Logic to determine the best professor based on HTML request
+        // logic to determine the best professor based on HTML request
         const bestProf = await determineBestProf(departmentValue, classNumberValue);
 
-        const speakOutput = `The best professor for ${departmentValue} ${classNumberValue} is ${bestProf}.`;
-        console.log(`speak output: ${speakOutput}`)
+        let speakOutput = '';
+        if (bestProf) {
+            speakOutput = `The best professor for ${departmentValue} 
+            <say-as interpret-as="characters">${classNumberValue}</say-as> 
+            is ${bestProf[0]}, with a rating of ${bestProf[1]} out of five.`;
+        } else {
+            speakOutput = 'There was an error finding your class.';
+        }
+        speakOutput += ' Would you like to search for another professor? Please say the department and class number or say stop to exit.';
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .withShouldEndSession(true)
+            .reprompt('Please say the department and class number or say stop to exit.')
             .getResponse();
     }
 };
@@ -62,7 +82,7 @@ const ErrorHandler = {
         return true;
     },
     handle(handlerInput, error) {
-        console.error('Error handled: ${error.message}');
+        console.error(`Error handled: ${error.message}`);
         return handlerInput.responseBuilder
             .speak('Sorry, I cannot understand the command. Please try again.')
             .getResponse();
@@ -72,7 +92,8 @@ const ErrorHandler = {
 exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         LaunchRequestHandler,
-        FindProfessorIntentHandler
+        FindProfessorIntentHandler,
+        StopIntentHandler,
     )
     .addErrorHandlers(
         ErrorHandler
