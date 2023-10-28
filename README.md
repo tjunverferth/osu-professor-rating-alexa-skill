@@ -8,9 +8,9 @@ the code provided here uses the following libraries: ask-sdk-core for Alexa-rela
 
 there are steps that will need to be taken in the Alexa Developer console to make this Lambda function work:
 
-the code, as it is in the current version, uses an Alexa skill with intent named "best_prof"
-it has a sample utterance "What is the best professor for {department} {class}?", which covers requests in the current scope of the skill
-department is a "Custom with values" slot type and has a handful of OSU departments as a basis for Alexa to understand the gist of what a "department" is (e.g. CSE, ECE, BIO, PHYSICS, MATH)
+the code, as it is in the current version, uses a custom Alexa skill with intent named "best_prof"
+it has a sample utterance "{department} {class}", which covers requests in the current scope of the skill since initial and re-prompts ask explicitly for a class and number
+department is a "Custom with values" slot type and has a handful of OSU departments as a basis for Alexa to understand the gist of what a "department" is (e.g. CSE, ECE, ENGLISH, PHYSICS, MATH)
 class is a Built-In slot type named AMAZON.FOUR_DIGIT_NUMBER, as this skill finds SEI ratings for classes that are four digit numbers, which almost all OSU classes are
 
 to make the AWS Lambda function work with the Alexa skill, you'll need to zip the files provided here along with the "node_modules" directory created with the command npm ci and upload this zip to AWS Lambda
